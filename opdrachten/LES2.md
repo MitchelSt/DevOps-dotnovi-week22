@@ -1,367 +1,142 @@
 # Les 2: Docker Containerisatie
 
-## Doelstellingen
+## Opdrachtbeschrijving
 
-In deze les leer je:
-- Docker basisbegrippen
-- Wat containers zijn en waarom ze nuttig zijn
-- Hoe je de dotNOVI applicatie containeriseert
-- Dockerfile schrijven en optimaliseren
-- Docker images bouwen en runnen
+Je hebt in les 1 kennisgemaakt met dotNOVI. De applicatie draait inmiddels op je eigen computer, maar hoe zorg je ervoor dat deze ook op andere computers kan draaien zonder dat je daar eerst Node.js en alle dependencies moet installeren?
 
-## Wat is Docker?
+Daar gaan we deze week mee aan de slag!
 
-Docker is een containerisatie-platform dat applicaties isoleert in "containers" - standaardized eenheden die alles bevatten wat nodig is om te runnen:
-- Applicatie code
-- Runtime
-- Dependencies
-- System tools
-- Libraries
-
-### Voordelen van Containers
-
-```
-┌─────────────────────────────────────────┐
-│          Zonder Containers              │
-├─────────────────────────────────────────┤
-│ "Het werkt op mijn machine!"           │
-│ - Versieverschillen                    │
-│ - Omgeving specifieke issues           │
-│ - Moeilijk reproduceerbaar             │
-│ - Deployment problemen                 │
-└─────────────────────────────────────────┘
-
-┌─────────────────────────────────────────┐
-│          Met Containers                 │
-├─────────────────────────────────────────┤
-│ "Het werkt overal hetzelfde"           │
-│ - Consistent environment                │
-│ - Gemakkelijk reproduceerbaar           │
-│ - Snelle deployment                    │
-│ - Isolation tussen applicaties         │
-└─────────────────────────────────────────┘
-```
-
-## Docker Terminologie
-
-- **Image**: Template/blauwdruk voor een container
-- **Container**: Running instance van een image
-- **Dockerfile**: Instructies om een image te bouwen
-- **Registry**: Repository voor images (Docker Hub, GHCR)
-- **Layer**: Component van een image (stackable)
-
-## Dockerfile Breakdown
-
-```dockerfile
-# FROM: Base image starten
-FROM node:20-alpine
-
-# LABEL: Metadata
-LABEL maintainer="NOVI"
-
-# WORKDIR: Werkmapje in container
-WORKDIR /app
-
-# COPY: Bestanden van host naar container
-COPY package*.json ./
-
-# RUN: Commando's uitvoeren
-RUN npm ci --only=production
-
-# COPY: Meer bestanden
-COPY src ./src
-
-# HEALTHCHECK: Health monitoring
-HEALTHCHECK --interval=30s CMD ...
-
-# EXPOSE: Port declaratie
-EXPOSE 3000
-
-# CMD: Default command
-CMD ["node", "src/index.js"]
-```
-
-## Hands-on: Dockerfile Gebruiken
-
-### Stap 1: Installeer Docker
-
-[Download Docker Desktop](https://www.docker.com/products/docker-desktop)
-
-Controleer installatie:
-```bash
-docker --version
-docker run hello-world
-```
-
-### Stap 2: Kopieer Dockerfile
-
-```bash
-# Kopieer Dockerfile naar dotNOVI-app root
-cp Dockerfile ../../../dotNOVI-app/
-cp .dockerignore ../../../dotNOVI-app/
-```
-
-### Stap 3: Build Docker Image
-
-```bash
-cd ../../../dotNOVI-app
-
-# Build image
-docker build -t dotnovi:latest .
-
-# Controleer image
-docker images | grep dotnovi
-```
-
-### Stap 4: Run Container
-
-```bash
-# Run container
-docker run -d -p 3000:3000 --name dotnovi-app dotnovi:latest
-
-# Check logs
-docker logs dotnovi-app
-
-# Test applicatie
-curl http://localhost:3000/health
-
-# Stop container
-docker stop dotnovi-app
-```
-
-### Stap 5: Run met Environment Variables
-
-```bash
-# Met DATABASE_URL
-docker run -d \
-  -p 3000:3000 \
-  -e DATABASE_URL="postgresql://user:pass@postgres:5432/dotnovi" \
-  -e PORT=3000 \
-  --name dotnovi-app \
-  dotnovi:latest
-
-# Check omgeving in container
-docker exec dotnovi-app env | grep DATABASE_URL
-```
+Je gaat dotNOVI **containeriseren met Docker**. Je schrijft een Dockerfile, bouwt een Docker-image en start de applicatie in een container. Daarna start je ook een PostgreSQL-container, zodat de applicatie gebruik kan maken van een database.
 
 ## Opdrachten
 
-### Opdracht 1: Dockerfile schrijven
+### Opdracht 1: Een Dockerfile schrijven
 
-Maak een Dockerfile in de root van je dotNOVI-project.
+In deze opdracht maak je dotNOVI geschikt om in een Docker-container te draaien.
 
-```bash
-# 1. Maak een Dockerfile met de volgende instructies:
-#    - Base image: node:20-alpine
-#    - WORKDIR /app
-#    - Kopieer package.json eerst, dan npm install, dan code
-#    - EXPOSE 3000
-#    - CMD: npm start
+1. Zorg dat Docker geïnstalleerd is en controleer of het werkt:
 
-# 2. Vergeet ook een .dockerignore aan te maken:
-#    node_modules, .git, *.md, .env
-
-# 3. Controleer je Dockerfile
-cat Dockerfile
-```
-
-**Tip:** Waarom package.json apart kopiëren? → Layer caching! Dependencies worden alleen opnieuw geïnstalleerd als package.json verandert.
-
-### Opdracht 2: Builden en draaien
-
-Build je image en test de container.
-
-```bash
-# 1. Build het image
-docker build -t dotnovi:v1 .
-
-# 2. Run de container
-docker run -d -p 3000:3000 --name dotnovi dotnovi:v1
-
-# 3. Test de applicatie
-curl http://localhost:3000
-curl http://localhost:3000/health
-
-# 4. Bekijk de logs
-docker logs dotnovi
-
-# 5. Kijk rond in de container
-docker exec -it dotnovi sh
-
-# 6. Stop en verwijder de container
-docker stop dotnovi
-docker rm dotnovi
-```
-
-**Werkt het niet?** Bekijk de logs, check de poort-mapping.
-
-### Opdracht 3: Database als container
-
-Start een PostgreSQL container en verbind je app ermee.
-
-```bash
-# 1. Start een PostgreSQL container
-docker run -d --name dotnovi-db \
-  -e POSTGRES_USER=dotnovi \
-  -e POSTGRES_PASSWORD=devops123 \
-  -e POSTGRES_DB=dotnovi \
-  -p 5432:5432 \
-  postgres:18-alpine
-
-# 2. Herstart de app met DATABASE_URL
-docker run -d -p 3000:3000 \
-  -e DATABASE_URL=postgresql://dotnovi:devops123@host.docker.internal:5432/dotnovi \
-  --name dotnovi dotnovi:v1
-
-# 3. Test of de app de database bereikt
-curl http://localhost:3000/health
-curl http://localhost:3000/api/notes
-
-# 4. Opruimen
-docker stop dotnovi dotnovi-db
-docker rm dotnovi dotnovi-db
-```
-
----
-
-## Optioneel / Bonus
-
-De volgende opdrachten zijn extra oefeningen om je kennis te verdiepen.
-
-### Bonus 1: Image Inspection
-
-```bash
-# Layers bekijken
-docker history dotnovi:v1
-
-# Size controleren
-docker images dotnovi:v1
-
-# Detailed info
-docker image inspect dotnovi:v1
-```
-
-### Bonus 2: Volume Mounting (voor development)
-
-```bash
-# Mount local src folder
-docker run -it \
-  -v $(pwd)/src:/app/src \
-  -p 3000:3000 \
-  dotnovi:v1
-
-# Wijzig lokale bestanden - zie wijzigingen in container
-# (NodeJS auto-reload nodig!)
-```
-
-### Bonus 3: Dockerfile Optimalisatie
-
-Pas Dockerfile aan voor kleinere image, snellere builds en betere beveiliging:
-
-```dockerfile
-# Optimized version
-FROM node:20-alpine AS build
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-# Runtime stage
-FROM node:20-alpine
-
-WORKDIR /app
-RUN addgroup -g 1001 nodejs && \
-    adduser -S nodejs -u 1001
-
-# Copy van build stage
-COPY --from=build --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --chown=nodejs:nodejs src ./src
-
-USER nodejs
-
-EXPOSE 3000
-CMD ["node", "src/index.js"]
-```
-
-## Docker Commands Reference
-
-```bash
-# Images
-docker build -t image:tag .          # Build image
-docker images                        # List images
-docker tag old:tag new:tag           # Tag image
-docker rmi image:tag                 # Remove image
-docker inspect image:tag             # Image details
-docker history image:tag             # Image layers
-
-# Containers
-docker run [options] image           # Run container
-docker ps                            # List running containers
-docker ps -a                         # All containers
-docker stop container_id             # Stop container
-docker start container_id            # Start container
-docker rm container_id               # Remove container
-docker logs container_id             # View logs
-docker exec container_id command     # Run command in container
-
-# Registry
-docker login                         # Login to registry
-docker push image:tag                # Push to registry
-docker pull image:tag                # Pull from registry
-```
-
-## Best Practices
-
-### Dockerfile Optimization
-
-1. **Minimize layers**: Combine RUN commands
-   ```dockerfile
-   # Bad
-   RUN apt-get update
-   RUN apt-get install -y curl
-   
-   # Good
-   RUN apt-get update && apt-get install -y curl
+   ```bash
+   docker --version
+   docker run hello-world
    ```
 
-2. **Use .dockerignore**: Exclude unnecessary files
-3. **Specific base image tags**: Vermijd `latest`
-4. **Non-root user**: Security best practice
-5. **Multi-stage builds**: Kleinere final images
-6. **Health checks**: Enable container monitoring
+2. Maak een eigen GitHub-repository met de code uit [DevOps-dotnovi-week2](https://github.com/hogeschoolnovi/DevOps-dotnovi-week2), zoals je dat in les 1 hebt gedaan. Clone je eigen repository naar je computer.
 
-### Layer Caching
+3. Maak in de root van het project een bestand met de naam `Dockerfile`. Zorg ervoor dat dit bestand:
+   - `node:20-alpine` als base image gebruikt.
+   - `/app` als werkdirectory instelt.
+   - Eerst `package.json` en `package-lock.json` kopieert.
+   - Met `npm ci --omit=dev` de production dependencies installeert.
+   - De applicatiecode uit `src/` kopieert.
+   - Poort `3000` beschikbaar stelt met `EXPOSE`.
+   - De applicatie start met `npm start`.
 
-```dockerfile
-# Order matters! Most changing layers last
+4. Maak een `.dockerignore` waarin je minimaal `node_modules`, `.git` en `.env` uitsluit.
 
-# Rarely changes
-FROM node:20-alpine
-WORKDIR /app
+**Vraag:** Waarom is het verstandig om eerst `package.json` en `package-lock.json` te kopiëren en de dependencies te installeren, voordat je de applicatiecode kopieert?
 
-# Static files
-COPY package*.json ./
+### Opdracht 2: Een Docker-image bouwen en starten
 
-# Install (cacheable)
-RUN npm ci --only=production
+Je gaat nu de Dockerfile gebruiken om dotNOVI in een container te draaien.
 
-# Code (frequently changes)
-COPY src ./src
+1. Bouw een Docker-image met de naam `dotnovi:v1`:
 
-# Config (might change)
-ENV NODE_ENV=production
-```
+   ```bash
+   docker build -t dotnovi:v1 .
+   ```
 
-## Volgende Les
+2. Controleer met `docker images` of je image is aangemaakt.
 
-In Les 3 gaan we:
-- Docker Compose introduceren
-- Multi-stage builds & image optimalisatie
-- Container registries & scanning
+3. Start een container:
+
+   ```bash
+   docker run -d -p 3000:3000 --name dotnovi dotnovi:v1
+   ```
+
+4. Open http://localhost:3000 en controleer of de applicatie bereikbaar is. Bekijk ook de livenesscheck op http://localhost:3000/health/live.
+
+   De database is nog niet gekoppeld. Het is dus normaal dat sommige onderdelen niet werken.
+
+5. Bekijk de logs van je container:
+
+   ```bash
+   docker logs dotnovi
+   ```
+
+6. Gebruik `docker exec -it dotnovi sh` om de container te openen. Bekijk welke bestanden erin staan.
+
+7. Stop en verwijder de container:
+
+   ```bash
+   docker stop dotnovi
+   docker rm dotnovi
+   ```
+
+**Vraag:** Wat is het verschil tussen een Docker-image en een Docker-container?
+
+### Opdracht 3: PostgreSQL in een container draaien
+
+dotNOVI gebruikt PostgreSQL om notities op te slaan. Je gaat nu een tweede container starten voor de database en deze verbinden met de applicatie.
+
+1. Maak een Docker-netwerk zodat beide containers met elkaar kunnen communiceren:
+
+   ```bash
+   docker network create dotnovi-network
+   ```
+
+2. Start een PostgreSQL-container op dit netwerk:
+
+   ```bash
+   docker run -d \
+     --name dotnovi-db \
+     --network dotnovi-network \
+     -e POSTGRES_USER=dotnovi \
+     -e POSTGRES_PASSWORD=devops123 \
+     -e POSTGRES_DB=dotnovi \
+     postgres:18-alpine
+   ```
+
+   Dit wachtwoord is uitsluitend bedoeld voor de lokale oefening.
+
+3. Maak de benodigde databasetabel aan met het meegeleverde SQL-bestand:
+
+   ```bash
+   docker exec -i dotnovi-db \
+     psql -U dotnovi -d dotnovi < src/db/init.sql
+   ```
+
+4. Start de applicatie opnieuw en geef de databaseverbinding mee als environment variable:
+
+   ```bash
+   docker run -d \
+     --name dotnovi \
+     --network dotnovi-network \
+     -p 3000:3000 \
+     -e DATABASE_URL=postgresql://dotnovi:devops123@dotnovi-db:5432/dotnovi \
+     dotnovi:v1
+   ```
+
+5. Open http://localhost:3000 en controleer of de applicatie nu met de database werkt. Controleer ook http://localhost:3000/health/ready. Deze endpoint moet HTTP 200 teruggeven als de databaseverbinding werkt.
+
+6. Bekijk de logs als iets niet werkt. Stop en verwijder na afloop beide containers en het Docker-netwerk.
+
+**Vraag:** Waarom gebruiken we in de databaseverbinding de hostnaam `dotnovi-db` in plaats van `localhost`?
+
+### Opdracht 4: Je werk opleveren
+
+1. Commit je `Dockerfile` en `.dockerignore` met een duidelijke commit message.
+2. Push je wijzigingen naar GitHub.
+3. Maak een Pull Request naar `main`.
+4. Beschrijf in je PR wat je hebt gemaakt en hoe je hebt gecontroleerd dat de applicatie in Docker werkt.
+5. Merge je PR.
+
+## Volgende les
+
+In les 3 ga je Docker Compose gebruiken om meerdere containers eenvoudiger samen te starten en te beheren. Ook ga je verder aan de slag met het optimaliseren en publiceren van Docker-images.
 
 ## Resources
 
-- [Docker Documentation](https://docs.docker.com/)
-- [Dockerfile Reference](https://docs.docker.com/engine/reference/builder/)
-- [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
-- [Docker Hub](https://hub.docker.com/)
+- [Docker Get Started](https://docs.docker.com/get-started/)
+- [Dockerfile Reference](https://docs.docker.com/reference/dockerfile/)
+- [Docker Networking](https://docs.docker.com/engine/network/)
