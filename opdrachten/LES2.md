@@ -21,7 +21,7 @@ In deze opdracht maak je dotNOVI geschikt om in een Docker-container te draaien.
    docker run hello-world
    ```
 
-2. Maak een eigen GitHub-repository met de code uit [DevOps-dotnovi-week2](https://github.com/hogeschoolnovi/DevOps-dotnovi-week2), zoals je dat in les 1 hebt gedaan. Clone je eigen repository naar je computer.
+2. Als je de dotNOVI applicatie al op je computer hebt, kun je daarin verder werken. Is dit de eerste keer dat je met deze applicatie werkt? Clone dan deze repository naar je computer en push de code naar je eigen repository.
 
 3. Maak in de root van het project een bestand met de naam `Dockerfile`. Zorg ervoor dat dit bestand:
    - `node:20-alpine` als base image gebruikt.
